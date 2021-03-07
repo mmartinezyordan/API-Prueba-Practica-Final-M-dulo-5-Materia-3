@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+    <title>API-Prueba-Practica-Final-M-dulo-5-Materia-3</title>
+
+    <link rel="stylesheet" href="http://js.arcgis.com/3.8/js/dojo/dijit/themes/claro/claro.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.35/esri/css/esri.css">
+    <link rel="stylesheet" href="css/layout.css"/>
+
+    <script>var dojoConfig = { parseOnLoad: true };</script>
+    <script src="https://js.arcgis.com/3.35/"></script>
+    <style>
+
+    </style>
+    <script>
+
+    var mapMain;
+    var tb;
+
+    require(["esri/map",
+        "esri/geometry/webMercatorUtils",
+        "esri/layers/ArcGISDynamicMapServiceLayer",
+        "esri/layers/FeatureLayer",
+        "esri/geometry/Extent",
+        "esri/toolbars/draw",
+        "esri/graphic",
+        "esri/tasks/query",
+
+        "esri/dijit/Scalebar",
+        "esri/dijit/Legend",
+        "esri/dijit/BasemapGallery",
+        "esri/dijit/Search",
+        "esri/dijit/OverviewMap",
+        "esri/dijit/PopupTemplate",
+        "esri/dijit/HomeButton",
+
+        "esri/symbols/SimpleFillSymbol",
+        "esri/symbols/SimpleLineSymbol",            
+        "esri/symbols/SimpleMarkerSymbol",
+        "esri/renderers/SimpleRenderer",
+                
+        "dojo/ready",
+        "dojo/parser",
+        "dojo/on",
+        "dojo/dom",        
+
+        "dojo/store/Memory",
+        "dojo/date/locale",
+
+        "dojo/_base/Color",
+        "dojo/_base/declare",
+        "dojo/_base/array",
+
+        "dgrid/OnDemandGrid",
+        "dgrid/Selection",
+
+        "dijit/form/ComboBox",
+        "dijit/layout/TabContainer",
+        "dijit/layout/ContentPane",
+        "dijit/layout/BorderContainer",
+        "dojo/domReady!"],
+        function(Map, webMercatorUtils, ArcGISDynamicMapServiceLayer, FeatureLayer, Extent, Draw, Graphic, Query, 
+        Scalebar, Legend, BasemapGallery, Search, OverviewMap, PopupTemplate, HomeButton,
+        SimpleFillSymbol, SimpleLineSymbol, SimpleMarkerSymbol, SimpleRenderer,   
+        ready, parser, on, dom, 
+        Memory, locale,
+        Color, declare, array,
+        Grid, Selection,
+        ComboBox, BorderContainer, ContentPane, Button
+        ) {
+
+      var extentInitial = new Extent({
+        "xmin": -11535191.501121324,
+        "ymin": 3286084.8695277404,
+        "xmax": -7350110.356180864,
+        "ymax": 6548702.8609162215,
+        "spatialReference": { "wkid": 102100 }
+        });
+       mapMain = new Map("map", {
+        basemap: "hybrid",
+        extent: extentInitial
+      });
+        var template1=new PopupTemplate({
+          title: "Information About the City "+"{areaname}"+", "+"{st}",
+          description: "{areaname}"+", "+"{st}"+ ": with a population of "+"{pop2000}"+ " persons."
+        });
+
+        var template2=new PopupTemplate({
+                  title: "Name: {STATE_NAME}",
+                  description: "Population: {POP2000} persons. <br> Population by mile: {POP00_SQMI} <br> Area: {st_area(shape)} ",   
+            });
+        var lyrUSA = new ArcGISDynamicMapServiceLayer("http://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer", {
+        opacity: 0.25});
+        lyrUSA.setVisibleLayers([1, 3]);
+      var outFieldsCities = ["st", "areaname", "pop2000"];
+      var lyrCities = new FeatureLayer("http://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer/0",{
+        outFields: outFieldsCities,
+        infoTemplate: template1
+      });
+      var outFieldsStates = ["state_name", "pop2000", "pop00_sqmi", "st_area(shape)"];
+      var lyrStates = new FeatureLayer("http://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer/2",{
+        outFields:outFieldsStates,
+        infoTemplate: template2,
+        opacity: 0.4
+      });
+      mapMain.on("load", function (evt) {
+        mapMain.resize();
+        mapMain.reposition();
+        mapMain.addLayer(lyrUSA);
+        mapMain.addLayer(lyrCities);
+        mapMain.addLayer(lyrStates);
+        mapMain.on("mouse-move", showCoordinates);
+        mapMain.on("mouse-drag", showCoordinates);
+
+      var dijiScalebar = new Scalebar({
+        map: mapMain,
+        scalebarUnit: "dual",
+        attachTo: "bottom-center"
+      });
+
+      var Leyenda = new Legend({
+        map: mapMain,
+        arrangement: Legend.ALIGN_LEFT
+      }, "legendDiv");
+      Leyenda.startup();
+      
+      var basemapGallery = new BasemapGallery({
+        showArcGISBasemaps: true,
+        map: mapMain
+      }, "basemapGallery");
+      basemapGallery.startup();
+
+      var dijitSearch = new Search({
+                map: mapMain,
+                autoComplete: true,
+                height: 10,
+                width: 120,
+                
+            }, "divSearch");
+      dijitSearch.startup();
+
+      var overviewMapDijit = new OverviewMap({
+        map: mapMain,
+        attachTo: "bottom-right",
+        environment: {
+          background: {
+            type: "color",
+            color: [255, 0, 0, 0]
+          },
+          starsEnabled: false,
+          atmosphereEnabled: false
+          },
+        height: 100,
+        width: 120
+        },"MapaPeque");
+        overviewMapDijit.startup();
+      
+        function showCoordinates(evt) {
+          var mp = webMercatorUtils.webMercatorToGeographic(evt.mapPoint);
+          dom.byId("Coordenadas").innerHTML = "Latitud: "+ mp.y.toFixed(3)+ ", Longitud: "+mp.x.toFixed(3);
+        }
+
+        var home = new HomeButton({
+            map: mapMain
+          }, "HomeButton");
+          home.startup();
+      });
+
+      on(dojo.byId("pintaYQuery"),"click",fPintaYQuery);       
+       
+        function fPintaYQuery(){
+          var tbDraw = new Draw(mapMain);
+          tbDraw.on("draw-complete",addToMap);
+          tbDraw.activate(Draw.POLYGON);
+        }
+        function addToMap(evt) {
+          var geometryInput = evt.geometry;
+          var tbDrawSymbol = new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID, new SimpleLineSymbol(SimpleLineSymbol.STYLE_DASHDOT, new Color([255, 0, 0]), 2), new Color([255, 255, 0, 0.2]));
+          mapMain.graphics.clear();
+          var graphicPolygon = new Graphic(geometryInput, tbDrawSymbol);
+          mapMain.graphics.add(graphicPolygon);
+          selectCities(geometryInput);
+        }      
+        function selectCities(geometryInput) {
+          var symbolSelected = new SimpleMarkerSymbol({
+            "type": "esriSMS",
+            "style": "esriSMSCircle",
+            "color": [255, 0, 0, 128],
+            "size": 8,
+            "outline": {"color": [255, 0, 0, 214],
+                    "width": 1}
+          });
+          lyrCities.setSelectionSymbol(symbolSelected);
+
+          var queryCities = new Query();
+          queryCities.geometry = geometryInput;
+          lyrCities.on("selection-complete",populateGrid);
+          lyrCities.selectFeatures(queryCities, FeatureLayer.SELECTION_NEW);
+        } 
+        function populateGrid(results) {               
+          var dataCities;
+          dataCities = array.map(results.features, function (feature) {
+             return {"st": feature.attributes[outFieldsCities[0]],
+                      "areaname": feature.attributes[outFieldsCities[1]],
+                      "pop2000": feature.attributes[outFieldsCities[2]],
+                    }
+           });
+          var memStore = new Memory({
+            data: dataCities
+          });
+          gridCities.set("store", memStore);
+                 
+        }
+
+        var gridCities = new (declare([Grid, Selection]))({
+                bufferRows: Infinity,
+                columns: {
+                  st: "State",
+                  areaname: "City",
+                  pop2000: "Population"
+                }
+        }, "divGrid");
+
+      on(dojo.byId("OffpintaYQuery"),"click", OffpintaYQuery);
+       function OffpintaYQuery(){
+         mapMain.graphics.clear();
+         lyrCities.clearSelection()
+         mapMain.setExtent(extentInitial)
+       };
+
+      on(dojo.byId("progButtonNode"),"click",function fQueryEstados(){ 
+          mapMain.graphics.clear();
+         lyrCities.clearSelection();   
+        var sbState= new SimpleLineSymbol()
+          sbState.setWidth(4);
+          sbState.setColor(new Color ([255,0,0]));         
+  
+          lyrStates.setSelectionSymbol(sbState)
+  
+          var queryState = new Query();
+          queryState.where = `state_name = '${dojo.byId("dtb").value}'`;
+          lyrStates.selectFeatures(queryState, FeatureLayer.SELECTION_NEW, function SelectState (selection){
+          var extent = esri.graphicsExtent(result.features);
+              mapMain.setExtent(extent,true);
+        });
+      });
+
+      var StateStore=new Memory ({
+        data: [{name:"Alabama"},{name:"Alaska"},{name:"Arizona"},{name:"Arkansas"},{name:"California"},{name:"Colorado"},
+        {name:"Connecticut"},{name:"Delaware"},{name:"District of Columbia"},{name:"Florida"},{name:"Georgia"},{name:"Hawaii"},
+        {name:"Idaho"},{name:"Illinois"},{name:"Indiana"},{name:"Iowa"},{name:"Kansas"},{name:"Kentucky"},{name:"Louisiana"},
+        {name:"Maine"},{name:"Maryland"},{name:"Massachusetts"},{name:"Michigan"},{name:"Minnesota"},{name:"Mississippi"},
+        {name:"Missouri"},{name:"Montana"},{name:"Nebraska"},{name:"Nevada"},{name:"New Hampshire"},{name:"New Jersey"},
+        {name:"New Mexico"},{name:"New York"},{name:"North Carolina"},{name:"North Dakota"},{name:"Ohio"},{name:"Oklahoma"},
+        {name:"Oregon"},{name:"Pennsylvania"},{name:"Rhode Island"},{name:"South Carolina"},{name:"South Dakota"},{name:"Tennessee"},
+        {name:"Texas"},{name:"Utah"},{name:"Vermont"},{name:"Virginia"},{name:"Washington"},{name:"West Virginia"},{name:"Wisconsin"},
+        {name:"Wyoming"}]
+      });
+
+      var comboBox = new ComboBox({
+        id: "dtb",
+        name: "state",
+        value: "Washington",
+        store: StateStore,
+        autoComplete: true,
+        searchAttr: "name"
+      }, "dtb");
+
+    });
+  </script>
+
+  </head>
+  <body class="claro">
+    <div id="mainWindow"
+         data-dojo-type="dijit.layout.BorderContainer"
+         data-dojo-props="design:'headline', gutters:false"
+         style="width:100%; height:100%;">
+      <div id="header"
+         data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region:'top'">
+      API Final Work
+     <div id="subheader">Miguel A. Martinez Yordan</div>
+    </div>
+    <div data-dojo-type="dijit.layout.ContentPane" id="leftPane" data-dojo-props="region:'left'">
+      <div data-dojo-type="dijit.layout.TabContainer">
+        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="title:'Legend', selected:true">
+          <div id="legendDiv"></div>
+        </div>
+        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="title:'Tasks'" >
+          Operations
+          <button id="pintaYQuery" type="button">Select cities</button> <button id="OffpintaYQuery" type="button">Remove selection</button>
+          <div id="divGrid"></div>
+        </div>
+      </div>
+    </div>
+    <div id="map" data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region:'center'">
+      <div id="divSearch"></div>
+      <div id="MapaPeque"></div>
+      <div style="position:absolute; right:20px; top:10px; z-Index:999;">
+        <div data-dojo-type="dijit/TitlePane"
+             data-dojo-props="title:'Switch Basemap', closable:false, open:false">
+            <div data-dojo-type="dijit/layout/ContentPane" style="width:380px; height:280px; overflow:auto;">
+                <div id="basemapGallery"></div>                  
+            </div>            
+        </div>      
+      </div>
+    </div>
+    <div id="footer" data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region:'bottom'">
+      <label for="dtb">Enter the state name:</label> <input id="dtb" data-dojo-type="dijit/form/TextBox" value="Washington" />
+      <button id="progButtonNode" type="button">Go to state</button>
+      <div class="Coordenadas" id="Coordenadas"></div>      
+    </div>
+  </div>
+</body>
+</html>
